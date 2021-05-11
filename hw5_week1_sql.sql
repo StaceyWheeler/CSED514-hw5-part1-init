@@ -40,3 +40,6 @@ CREATE PROCEDURE InitDataModel AS
         );
 
 
+GO
+
+EXEC InitDataModel;
