@@ -10,71 +10,63 @@
 # ReserveDoses() which is called to reserve the vaccine doses associated with a 
 # specific patient who is being scheduled for vaccine administration.
 
-from datetime import datetime
-from datetime import timedelta
 import pymssql
-
+import pandas as pd
+import numpy as np
 
 class COVID19Vaccine:
     ''' Adds the Vaccine to the DB '''
+    # There will be an instance of COVID19Vaccine for each brand
     def __init__(self, VaccineBrand, cursor):
-        self.sqltext = "INSERT INTO Vaccines (VaccineBrand) VALUES ('" + VaccineBrand + "')"
-        self.VaccineId = 0
-        try: 
-            cursor.execute(self.sqltext)
-            cursor.connection.commit()
-            cursor.execute("SELECT @@IDENTITY AS 'Identity'; ")
-            _identityRow = cursor.fetchone()
-            self.VaccineId = _identityRow['Identity']
-            # cursor.connection.commit()
-            print('Query executed successfully. Vaccine : ' + name 
-            +  ' added to the database using Vaccine ID = ' + str(self.caregiverId))
-        except pymssql.Error as db_err:
-            print("Database Programming Error in SQL Query processing for Vaccines! ")
-            print("Exception code: " + str(db_err.args[0]))
-            if len(db_err.args) > 1:
-                print("Exception message: " + db_err.args[1])
-            print("SQL text that resulted in an Error: " + self.sqltext)
+        self.VaccineBrand = VaccineBrand
 
-# Below here is all template code, not edited for COVID19Vaccine class
-        _weeks_to_schedule = []
-        _now = datetime.now()
-        _weeks_to_schedule.append(_now)
-        _one_week_time_delta = timedelta(days=7)
-        _weeks_ahead = 4
-        _lcv = 0
-        while _lcv < _weeks_ahead:
-            _now = _now + _one_week_time_delta
-            _weeks_to_schedule.append(_now)
-            _lcv = _lcv + 1
+    # For adding new inventory to the table, user can call AddDoses with the instance corresponding to the brand 
+    # (e.g. Moderna.AddDoses(500) will add 500 rows of Moderna vaccines with status default to Available)
+    def AddDoses(self, num_doses, cursor):
 
-        _formatstring = "%Y-%m-%d"
+        # Create temp .csv file with vaccine name and number of doses in sequential order
+        # References last row in Vaccines table to get the next sequence
 
-        for _day in _weeks_to_schedule:
-            _formattedDate = _day.strftime(_formatstring)
-            # print (_formattedDate)
+        last_row = cursor.rownumber
+        vaccine_range = np.arange(1, num_doses + 1)
+        vaccine_id = vaccine_range + last_row
 
-            for _hr in _hoursToSchedlue:
-                _startTime = 0
-                while _startTime < 60:
-                    _sqltext2 = ("INSERT INTO CareGiverSchedule (caregiverid, WorkDay, SlotHour, SlotMinute) VALUES (") 
-                    _sqltext2 += str(self.caregiverId) + ", '" + _formattedDate + "', " 
-                    _sqltext2 += str(_hr) + ", "  
-                    _sqltext2 += str(_startTime) + ")" 
-                    try:
-                        cursor.execute(_sqltext2)
-                        _startTime = _startTime + _appointmentDuration
-                    except pymssql.Error as db_err:
-                        print("Database Programming Error in SQL Query processing for CareGiver scheduling slots! ")
-                        print("Exception code: " + str(db_err.args[0]))
-                        if len(db_err.args) > 1:
-                            print("Exception message: " + db_err.args[1]) 
-                        print("SQL text that resulted in an Error: " + _sqltext2)
+        vaccine_df = pd.DataFrame(data = vaccine_id)
+        vaccine_df['VaccineBrand'] = self.VaccineBrand
+        vaccine_df = vaccine_df.rename(columns = {0: 'VaccineID'})
+        vaccine_df.to_csv('temp.csv', index = False)
+
+        # Syntax for Bulk Insert
+
+        BulkInsert = '"BULK INSERT Vaccines'
+
+        cursor.execute("CREATE TABLE temp(VaccineID int, VaccineBrand VARCHAR(20))")
+
+    
+        self.VaccineId = cursor.rownumber + 1 # next available row
+        self.slotStatus = 'Available'
+        self.insert_text = "INSERT INTO Vaccines (VaccineID, VaccineBrand, SlotStatus) VALUES ("
+        self.sqltext = self.insert_text + str(self.VaccineId) + ","\
+            + self.VaccineBrand + "," + self.slotStatus + "')"
+        
+        for _ in range(0, num_doses):
+            try: 
+                cursor.execute(self.sqltext)
+                cursor.connection.commit()
+                cursor.execute("SELECT @@IDENTITY AS 'Identity'; ")
+                _identityRow = cursor.fetchone()
+                self.VaccineId = _identityRow['Identity']
+                print('Query executed successfully. Vaccine : ' +  self.VaccineBrand
+                +  ' added to the database using Vaccine ID = ' + str(self.VaccineId))
+            except pymssql.Error as db_err:
+                print("Database Programming Error in SQL Query processing for Vaccines! ")
+                print("Exception code: " + str(db_err.args[0]))
+                if len(db_err.args) > 1:
+                    print("Exception message: " + str(db_err.args[1]))
+                print("SQL text that resulted in an Error: " + self.sqltext)
+            self.sqltext = self.insert_text + str(self.VaccineId) + ","\
+                + self.VaccineBrand + "," + self.slotStatus + "')"
         cursor.connection.commit()
-
- #Methods to fill in for COVID19Vaccine class   
-    def AddDoses(self, cursor):
-        return None
 
     def ReserveDoses(self, cursor):
         return None
