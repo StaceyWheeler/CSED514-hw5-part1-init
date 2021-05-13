@@ -81,12 +81,17 @@ if __name__ == '__main__':
                 cgid = cg.caregiverId
                 caregivers[cgid] = cg
 
+            # Testing out adding rows to Vaccines and AddDoses:
+            # covid_obj_Moderna = covid('Moderna', 2, 28, dbcursor)
+            # covid_obj_Moderna.AddDoses('Moderna', 20, dbcursor)
+            # covid_obj_Pfizer = covid('Pfizer', 2, 21, dbcursor)
+            # covid_obj_Pfizer.AddDoses('Pfizer', 5, dbcursor)
+            # covid_obj_Pfizer.AddDoses('Pfizer', 10, dbcursor)
+            
+            #Testing out ReserveDoses:
             covid_obj_Moderna = covid('Moderna', 2, 28, dbcursor)
-            covid_obj_Moderna.AddDoses('Moderna', 20, dbcursor)
-            covid_obj_Pfizer = covid('Pfizer', 2, 21, dbcursor)
-            covid_obj_Pfizer.AddDoses('Pfizer', 5, dbcursor)
-            covid_obj_Pfizer.AddDoses('Pfizer', 10, dbcursor)
-            # Schedule the patients
+            covid_obj_Moderna.ReserveDoses('Moderna', dbcursor)
+
             
             # Test cases done!
             clear_tables(sqlClient)
