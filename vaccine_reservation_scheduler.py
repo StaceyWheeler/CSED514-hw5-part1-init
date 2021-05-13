@@ -8,7 +8,7 @@ from sql_connection_manager import SqlConnectionManager
 from vaccine_caregiver import VaccineCaregiver
 from enums import *
 from utils import *
-# from covid19_vaccine import COVID19Vaccine as covid
+from COVID19_Vaccine import COVID19Vaccine as covid
 # from vaccine_patient import VaccinePatient as patient
 
 
@@ -81,7 +81,7 @@ if __name__ == '__main__':
                 cgid = cg.caregiverId
                 caregivers[cgid] = cg
 
-            # Add a vaccine and Add doses to inventory of the vaccine
+            covid_obj = covid("Moderna", 2, 28, dbcursor)
             # Ass patients
             # Schedule the patients
             
