@@ -81,8 +81,11 @@ if __name__ == '__main__':
                 cgid = cg.caregiverId
                 caregivers[cgid] = cg
 
-            covid_obj = covid("Moderna", 2, 28, dbcursor)
-            # Ass patients
+            covid_obj_Moderna = covid('Moderna', 2, 28, dbcursor)
+            covid_obj_Moderna.AddDoses('Moderna', 20, dbcursor)
+            covid_obj_Pfizer = covid('Pfizer', 2, 21, dbcursor)
+            covid_obj_Pfizer.AddDoses('Pfizer', 5, dbcursor)
+            covid_obj_Pfizer.AddDoses('Pfizer', 10, dbcursor)
             # Schedule the patients
             
             # Test cases done!
