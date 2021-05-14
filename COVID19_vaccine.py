@@ -10,9 +10,10 @@ class COVID19Vaccine:
         sqltext1 = "SELECT * FROM Vaccines"
         cursor.execute(sqltext1)
         rows = cursor.fetchall()
+        #print('rows: ', rows)
         found = False
         for row in rows:
-        
+            #print(type(row))
             if row['VaccineName'] == name:
                 #break out. We don't want to add this vaccine to the table bc it already exists.
                 found = True
