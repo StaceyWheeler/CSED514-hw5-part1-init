@@ -4,7 +4,7 @@ GO
 InitSchedulerApp
 
 
-IF OBJECT_ID ( 'InitScheduerApp', 'P' ) IS NOT NULL
+IF OBJECT_ID ( 'InitSchedulerApp', 'P' ) IS NOT NULL
     DROP PROCEDURE InitSchedulerApp;
 GO  
 
