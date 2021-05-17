@@ -16,6 +16,7 @@ class VaccinePatient:
 
         if row['SlotStatus'] == 'OnHold':
             #carry on with scheduling the appointment
+            #What do we need to update to schedule an appointment?
             sqltext2 = ("UPDATE )
 
         else:

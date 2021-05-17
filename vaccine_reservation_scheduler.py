@@ -9,7 +9,7 @@ from vaccine_caregiver import VaccineCaregiver
 from enums import *
 from utils import *
 from COVID19_vaccine import COVID19Vaccine as covid
-# from vaccine_patient import VaccinePatient as patient
+from vaccine_patient import VaccinePatient as patient
 
 
 class VaccineReservationScheduler:
@@ -44,12 +44,14 @@ class VaccineReservationScheduler:
         returns the same slotid when the database update succeeds 
         returns 0 is there if the database update dails 
         returns -1 the same slotid when the database command fails
-        returns 21 if the slotid parm is invalid '''
+        returns -2 if the slotid parm is invalid '''
         # Note to students: this is a stub that needs to replaced with your code
         if slotid < 1:
             return -2
         self.slotSchedulingId = slotid
-        self.getAppointmentSQL = "SELECT something... "
+        #getAppointmnetSQL should grab the first available appointment from the CaregiverSchedule.
+        #Do we need to do a join on CaregiverSchedule and AppointmentStatusCode? 
+        self.getAppointmentSQL = "SELECT TOP 1 * FROM CaregiverSchedule WHERE SlotStatus = "
         try:
             cursor.execute(self.getAppointmentSQL)
             return self.slotSchedulingId
@@ -60,6 +62,8 @@ class VaccineReservationScheduler:
                 print("Exception message: " + str(db_err.args[1]))  
             print("SQL text that resulted in an Error: " + self.getAppointmentSQL)
             return -1
+
+        #We still need to mark the appointment OnHold... where to do that? In the select statement?
 
 if __name__ == '__main__':
         with SqlConnectionManager(Server=os.getenv("Server"),
