@@ -135,7 +135,7 @@ class VaccinePatient:
         
         vaccineApptSqlText = "UPDATE VaccineAppointments SET SlotStatus = 2 WHERE VaccineAppointmentId = %s"
         patientSqlText = "UPDATE Patients SET VaccineStatus = 2 WHERE PatientId = %s"
-        vaccineInventorySqlText = "UPDATE Vaccines SET AvailableDoses = AvailableDoses - 1, ReservedDoses = ReservedDoses - 1 WHERE VaccineName = %s"
+        vaccineInventorySqlText = "UPDATE Vaccines SET AvailableDoses = AvailableDoses - 1, ReservedDoses = ReservedDoses + 1 WHERE VaccineName = %s"
         cgSchedSqlText = "UPDATE CaregiverSchedule SET SlotStatus = 2 WHERE CaregiverId = %s"
 
         try: 
