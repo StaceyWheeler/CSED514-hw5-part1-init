@@ -1,3 +1,5 @@
+from datetime import datetime
+from datetime import timedelta
 import pymssql
 
 
@@ -75,8 +77,8 @@ class VaccinePatient:
 
             # Need to verify second appointment
 
-            days_out = vaccineRow['DaysBetweenDoses']
-            appt_day_2 = appt_day + days_out # Probably need to fix this to account for datetime
+            days_out = timedelta(days = vaccineRow['DaysBetweenDoses'])
+            appt_day_2 = datetime.strptime(appt_day) + days_out # Probably need to fix this to account for datetime
             cgSqlText = "'SELECT * FROM CareGiverSchedule WHERE WorkDay = " + appt_day_2 + "'"
             cursor.execute(cgSqlText)
             cgRows = cursor.fetchall()
