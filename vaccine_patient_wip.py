@@ -41,10 +41,10 @@ class VaccinePatient:
             cursor.execute(sqltext)
             row = cursor.fetchone()
             
-            if all:
-                res = row
-            else:
+            if col_name:
                 res = row[col_name]
+            else:
+                res = row
         
             return res
 
@@ -78,7 +78,7 @@ class VaccinePatient:
             # Need to verify second appointment
 
             days_out = timedelta(days = vaccineRow['DaysBetweenDoses'])
-            appt_day_2 = datetime.strptime(appt_day) + days_out # Probably need to fix this to account for datetime
+            appt_day_2 = appt_day + days_out # keep this in datetime
             cgSqlText = "'SELECT * FROM CareGiverSchedule WHERE WorkDay = " + appt_day_2 + "'"
             cursor.execute(cgSqlText)
             cgRows = cursor.fetchall()
@@ -101,23 +101,32 @@ class VaccinePatient:
         
         if dates_avail:
 
-            for i, slotid in enumerate(slotids):
-                sql_res = get_caregiver_item(slotid, cursor)
-                careGiverID = sql_res['CaregiverId']
-                VaccineName = Vaccine
-                PatientId = self.patientid
-                ReservationDate = appt_days[i]
-                ReservationStartHour = sql_res['SlotHour']
-                ReservationStartMinute = sql_res['SlotMinute']
-                AppointmentDuration = 15
-                SlotStatus = i*3 + 1 # 0 if i = 0; 4 if i = 1
-                sqltext_cols = "'INSERT INTO VaccineAppointments(VaccineName, PatientId, CaregiverId, ReservationDate, ReservationStartHour, ReservationStartMinute, AppointmentDuration, SlotStatus)"
-                sqltext_vals = "VALUES("+ VaccineName + "," + PatientId + "," + careGiverID + "," + ReservationDate + "," + ReservationStartHour + "," + ReservationStartMinute + "," + AppointmentDuration + "," + SlotStatus + ")'"
-                cursor.execute(sqltext_cols + sqltext_vals)
-                cursor.connection.commit()
-                cursor.execute("SELECT @@IDENTITY AS 'Identity'; ")
-                _identityRow = cursor.fetchone()
-                self.apptids.append(_identityRow['Identity'])
+            try:
+
+                for i, slotid in enumerate(slotids):
+                    sql_res = get_caregiver_item(slotid, cursor)
+                    careGiverID = sql_res['CaregiverId']
+                    VaccineName = Vaccine
+                    PatientId = self.patientid
+                    ReservationDate = appt_days[i].strftime('%Y-%m-%d') # convert back to str
+                    ReservationStartHour = sql_res['SlotHour']
+                    ReservationStartMinute = sql_res['SlotMinute']
+                    AppointmentDuration = 15
+                    SlotStatus = i*3 + 1 # 0 if i = 0; 4 if i = 1
+                    sqltext_cols = "'INSERT INTO VaccineAppointments(VaccineName, PatientId, CaregiverId, ReservationDate, ReservationStartHour, ReservationStartMinute, AppointmentDuration, SlotStatus)"
+                    sqltext_vals = "VALUES("+ VaccineName + "," + PatientId + "," + careGiverID + "," + ReservationDate + "," + ReservationStartHour + "," + ReservationStartMinute + "," + AppointmentDuration + "," + SlotStatus + ")'"
+                    cursor.execute(sqltext_cols + sqltext_vals)
+                    cursor.connection.commit()
+                    cursor.execute("SELECT @@IDENTITY AS 'Identity'; ")
+                    _identityRow = cursor.fetchone()
+                    self.apptids.append(_identityRow['Identity'])
+            
+            except pymssql.Error as db_err:
+                print("Database Programming Error in SQL Query processing for VaccinePatients! ")
+                print("Exception code: " + str(db_err.args[0]))
+                if len(db_err.args) > 1:
+                    print("Exception message: " + str(db_err.args[1]))
+                print("SQL text that resulted in an Error: " + self.sqltext)
 
 
     def ScheduleAppointment(self, VaccineAppointmentId, cursor):
@@ -146,7 +155,7 @@ class VaccinePatient:
             cursor.connection.commit()
             print('Query executed successfully. Appointment has been added to the schedule.')
         except pymssql.Error as db_err:
-            print("Database Programming Error in SQL Query processing for Caregivers! ")
+            print("Database Programming Error in SQL Query processing for VaccinePatients! ")
             print("Exception code: " + str(db_err.args[0]))
             if len(db_err.args) > 1:
                 print("Exception message: " + str(db_err.args[1]))
