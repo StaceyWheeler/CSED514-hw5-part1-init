@@ -120,6 +120,38 @@ class VaccinePatient:
                 self.apptids.append(_identityRow['Identity'])
 
 
-    def ScheduleAppointment(self, cursor):
+    def ScheduleAppointment(self, VaccineAppointmentId, cursor):
+        # ScheduleAppointment() marks the appointments as “Scheduled” -> VaccineAppointments (SlotStatus) to 2 
+        # update the Patient’s VaccineStatus field -> Patients (VaccineStatus) to 2
+        # maintain the Vaccine inventory -> Vaccines (AvailableDoses) -= 1, Vaccines (ReservedDoses) -= 1
+        # update the CaregiverSchedule Table -> CaregiverSchedule (SlotStatus) to 2
+        # and any additional tasks required to schedule the appointments for the Caregiver  to administer the vaccine doses to the Patient, ensuring that the database properly reflects the Scheduling Actions.
+        apptSqlText = "SELECT * FROM VaccineAppointments WHERE VaccineAppointmentId = %s"
 
+        appt_info = cursor.execute(apptSqlText)
+        patient_id = appt_info['PatientId']
+        vaccine_name = appt_info['VaccineName']
+        caregiver_id = appt_info['CaregiverId']
+        
+        vaccineApptSqlText = "UPDATE VaccineAppointments SET SlotStatus = 2 WHERE VaccineAppointmentId = %s"
+        patientSqlText = "UPDATE Patients SET VaccineStatus = 2 WHERE PatientId = %s"
+        vaccineInventorySqlText = "UPDATE Vaccines SET AvailableDoses = AvailableDoses - 1, ReservedDoses = ReservedDoses - 1 WHERE VaccineName = %s"
+        cgSchedSqlText = "UPDATE CaregiverSchedule SET SlotStatus = 2 WHERE CaregiverId = %s"
+
+        try: 
+            cursor.execute(vaccineApptSqlText, ((str(self.VaccineAppointmentId))))
+            cursor.execute(patientSqlText, ((str(patient_id))))
+            cursor.execute(vaccineInventorySqlText, ((str(vaccine_name))))
+            cursor.execute(cgSchedSqlText, ((str(caregiver_id))))
+            cursor.connection.commit()
+            print('Query executed successfully. Appointment has been added to the schedule.')
+        except pymssql.Error as db_err:
+            print("Database Programming Error in SQL Query processing for Caregivers! ")
+            print("Exception code: " + str(db_err.args[0]))
+            if len(db_err.args) > 1:
+                print("Exception message: " + str(db_err.args[1]))
+            print("SQL text that resulted in an Error: " + self.sqltext)
+
+        cursor.connection.commit()
+        
         return None
