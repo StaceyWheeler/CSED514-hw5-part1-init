@@ -10,7 +10,7 @@ class VaccinePatient:
         """
         Adds new Patient to Patients table
         """
-        self.sqltext = "INSERT INTO Patients (PatientName, VaccineStatus) VALUES ('" + name + ", 0')"
+        self.sqltext = "INSERT INTO Patients (PatientName, VaccineStatus) VALUES ('" + name + "', 0)"
         self.patientid = 0
         self.apptids = []
         try:
@@ -37,7 +37,7 @@ class VaccinePatient:
             """
             Helper to return sql query
             """
-            sqltext = "'SELECT * FROM CareGiverSchedule WHERE CaregiverSlotSchedulingId = " + str(SlotId) + "'"
+            sqltext = "SELECT * FROM CareGiverSchedule WHERE CaregiverSlotSchedulingId = " + str(SlotId)
             cursor.execute(sqltext)
             row = cursor.fetchone()
             
@@ -67,8 +67,8 @@ class VaccinePatient:
 
         # Check the dosage needed for this vaccine
 
-        vaccineSqlText = "'SELECT * FROM Vaccines WHERE VaccineName = " + Vaccine + "'"
-        cursor.execute(vaccineSqlText)
+        vaccineSqlText = "SELECT * FROM Vaccines WHERE VaccineName = %s"
+        cursor.execute(vaccineSqlText, (Vaccine))
         vaccineRow = cursor.fetchone()
         dosage = vaccineRow['DosesPerPatient']
         dates_avail = False
@@ -78,14 +78,14 @@ class VaccinePatient:
             # Need to verify second appointment
 
             days_out = timedelta(days = vaccineRow['DaysBetweenDoses'])
-            appt_day_2 = appt_day + days_out # keep this in datetime
-            cgSqlText = "'SELECT * FROM CareGiverSchedule WHERE WorkDay = " + appt_day_2 + "'"
+            appt_day_2 = (appt_day + days_out) # keep this in datetime
+            cgSqlText = "SELECT * FROM CareGiverSchedule WHERE WorkDay = '" + appt_day_2.strftime('%Y-%m-%d') + "'"
             cursor.execute(cgSqlText)
             cgRows = cursor.fetchall()
             second_avail = False
             for cgRow in cgRows:
                 if cgRow['SlotStatus'] == 0:
-                    cg_slot_2 = cgRow['CaregiverSlotScheduleingId']
+                    cg_slot_2 = cgRow['CaregiverSlotSchedulingId']
                     second_avail = True
                     slotids.append(cg_slot_2)
                     appt_days.append(appt_day_2)
@@ -113,8 +113,8 @@ class VaccinePatient:
                     ReservationStartMinute = sql_res['SlotMinute']
                     AppointmentDuration = 15
                     SlotStatus = i*3 + 1 # 0 if i = 0; 4 if i = 1
-                    sqltext_cols = "'INSERT INTO VaccineAppointments(VaccineName, PatientId, CaregiverId, ReservationDate, ReservationStartHour, ReservationStartMinute, AppointmentDuration, SlotStatus)"
-                    sqltext_vals = "VALUES("+ VaccineName + "," + PatientId + "," + careGiverID + "," + ReservationDate + "," + ReservationStartHour + "," + ReservationStartMinute + "," + AppointmentDuration + "," + SlotStatus + ")'"
+                    sqltext_cols = "INSERT INTO VaccineAppointments(VaccineName, PatientId, CaregiverId, ReservationDate, ReservationStartHour, ReservationStartMinute, AppointmentDuration, SlotStatus)"
+                    sqltext_vals = "VALUES("+ VaccineName + "," + PatientId + "," + careGiverID + "," + ReservationDate + "," + ReservationStartHour + "," + ReservationStartMinute + "," + AppointmentDuration + "," + SlotStatus + ")"
                     cursor.execute(sqltext_cols + sqltext_vals)
                     cursor.connection.commit()
                     cursor.execute("SELECT @@IDENTITY AS 'Identity'; ")
