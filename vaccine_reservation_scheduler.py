@@ -23,11 +23,12 @@ class VaccineReservationScheduler:
         Should return 0 if no slot is available  or -1 if there is a database error'''
         # Note to students: this is a stub that needs to replaced with your code
         self.slotSchedulingId = 0
-        self.getAppointmentSQL = "SELECT something..."
+        self.getAppointmentSQL = "SELECT TOP 1 CaregiverSlotSchedulingId FROM CaregiverSchedule WHERE SlotStatus = 0"
         try:
             cursor.execute(self.getAppointmentSQL)
+            self.slotSchedulingId = cursor.fetchone()
             cursor.connection.commit()
-            return self.slotSchedulingId
+            #return self.slotSchedulingId
         
         except pymssql.Error as db_err:
             print("Database Programming Error in SQL Query processing! ")
@@ -37,6 +38,22 @@ class VaccineReservationScheduler:
             print("SQL text that resulted in an Error: " + self.getAppointmentSQL)
             cursor.connection.rollback()
             return -1
+
+        if self.slotSchedulingId != 0:
+            putApptOnHoldSqlText = "UPDATE CaregiverSchedule SET SlotStatus = 1 WHERE CaregiverId = %s"
+            try:
+                cursor.execute(putApptOnHoldSqlText, (str(self.slotSchedulingId))
+                cursor.connection.commit()
+                print('Query executed successfully. Appointment has been added to the schedule.')
+            except pymssql.Error as db_err:
+                print("Database Programming Error in SQL Query processing for VaccinePatients! ")
+                print("Exception code: " + str(db_err.args[0]))
+                if len(db_err.args) > 1:
+                    print("Exception message: " + str(db_err.args[1]))
+                print("SQL text that resulted in an Error: " + self.sqltext)
+
+        cursor.connection.commit()
+        return self.slotSchedulingId
 
     def ScheduleAppointmentSlot(self, slotid, cursor):
         '''method that marks a slot on Hold with a definite reservation  
