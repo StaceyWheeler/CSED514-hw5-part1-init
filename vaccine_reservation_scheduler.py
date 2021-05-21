@@ -23,15 +23,22 @@ class VaccineReservationScheduler:
         Should return -2 if no slot is available  or -1 if there is a database error'''
         # Note to students: this is a stub that needs to replaced with your code
         self.slotSchedulingId = -2
-        self.getAppointmentSQL = "SELECT TOP (1)* FROM CaregiverSchedule WHERE SlotStatus = 0 ORDER BY WorkDay, SlotHour, SlotMinute"
+        self.getAppointmentSQL = "SELECT TOP (1)* FROM CaregiverSchedule WHERE SlotStatus = 0 ORDER BY WorkDay, SlotHour, SlotMinute ASC"
         try:
             cursor.execute(self.getAppointmentSQL)
+            row = cursor.fetchone()
+            self.slotSchedulingId = row['CaregiverSlotSchedulingId']
+            print("slotID: ", self.slotSchedulingId)
             cursor.connection.commit()
-            cursor.execute("SELECT @@IDENTITY AS 'Identity';")
-            _identityRow = cursor.fetchone()
-            self.slotSchedulingId = _identityRow['Identity']
+            #cursor.execute("SELECT @@IDENTITY AS 'Identity';")
+            #rows = cursor.fetchall()
+            #for row in rows:
+            #    _identityRow = row['Identity']
+            #    print("identityrow: ",_identityRow)
+            #    break
+            #self.slotSchedulingId = _identityRow
             #print(self.slotSchedulingId)
-            cursor.connection.commit()
+            #cursor.connection.commit()
             #return self.slotSchedulingId
         
         except pymssql.Error as db_err:
@@ -52,7 +59,6 @@ class VaccineReservationScheduler:
                 cursor.execute(test_sql, str(self.slotSchedulingId))
                 test_retr = cursor.fetchone()
                 print(test_retr)
-                #print(self.slotSchedulingId)
                 print('Query executed successfully. Appointment has been added to the schedule.')
             except pymssql.Error as db_err:
                 print("Database Programming Error in SQL Query processing for VaccinePatients! ")
@@ -114,12 +120,13 @@ if __name__ == '__main__':
 
             vrs = VaccineReservationScheduler()
             cgid = vrs.PutHoldOnAppointmentSlot(dbcursor)
-            print(cgid)
+            # print(cgid)
 
             patient_obj = patient('Snow White', dbcursor)
+            print('patient id: ',patient_obj.patientid)
             patient_obj.ReserveAppointment(cgid, 'Moderna', dbcursor)
             appt_ids = patient_obj.apptids
-            print(appt_ids)
+            print('now scheduling')
             patient_obj.ScheduleAppointment(appt_ids, dbcursor)
 
             # Testing out adding rows to Vaccines and AddDoses:
