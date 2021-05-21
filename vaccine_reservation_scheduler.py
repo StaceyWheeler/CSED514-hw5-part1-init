@@ -20,9 +20,9 @@ class VaccineReservationScheduler:
     def PutHoldOnAppointmentSlot(self, cursor):
         ''' Method that reserves a CareGiver appointment slot &
         returns the unique scheduling slotid
-        Should return 0 if no slot is available  or -1 if there is a database error'''
+        Should return -2 if no slot is available  or -1 if there is a database error'''
         # Note to students: this is a stub that needs to replaced with your code
-        self.slotSchedulingId = 0
+        self.slotSchedulingId = -2
         self.getAppointmentSQL = "SELECT TOP (1)* FROM CaregiverSchedule WHERE SlotStatus = 0 ORDER BY WorkDay, SlotHour, SlotMinute"
         try:
             cursor.execute(self.getAppointmentSQL)
@@ -43,11 +43,15 @@ class VaccineReservationScheduler:
             cursor.connection.rollback()
             return -1
 
-        if self.slotSchedulingId != 0:
-            putApptOnHoldSqlText = "UPDATE CaregiverSchedule SET SlotStatus = 1 WHERE CaregiverId = %s"
+        if self.slotSchedulingId != -2:
+            putApptOnHoldSqlText = "UPDATE CareGiverSchedule SET SlotStatus = 1 WHERE CaregiverSlotSchedulingId = %s"
             try:
                 cursor.execute(putApptOnHoldSqlText, str(self.slotSchedulingId))
                 cursor.connection.commit()
+                test_sql = "SELECT * FROM CareGiverSchedule WHERE CaregiverSlotSchedulingId = %s"
+                cursor.execute(test_sql, str(self.slotSchedulingId))
+                test_retr = cursor.fetchone()
+                print(test_retr)
                 #print(self.slotSchedulingId)
                 print('Query executed successfully. Appointment has been added to the schedule.')
             except pymssql.Error as db_err:
@@ -132,4 +136,4 @@ if __name__ == '__main__':
 
             
             # Test cases done!
-            clear_tables(sqlClient)
+            #clear_tables(sqlClient)
