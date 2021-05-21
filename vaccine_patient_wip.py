@@ -53,6 +53,7 @@ class VaccinePatient:
             Helper to check whether CareGiverSlotID == Hold
             """
             slot_status = get_caregiver_item(SlotId, cursor, col_name='SlotStatus')
+            print('slot_status: ', slot_status)
 
             return slot_status == 1
 
@@ -63,6 +64,8 @@ class VaccinePatient:
         if is_hold:
             slotids.append(CaregiverScheduleID)
         appt_day = get_caregiver_item(CaregiverScheduleID, cursor, col_name='WorkDay')
+        #print(appt_day)
+        #print(type(appt_day))
         appt_days.append(appt_day)
 
         # Check the dosage needed for this vaccine
@@ -72,13 +75,14 @@ class VaccinePatient:
         vaccineRow = cursor.fetchone()
         dosage = vaccineRow['DosesPerPatient']
         dates_avail = False
+        # print(dosage)
 
         if dosage > 1:
 
             # Need to verify second appointment
 
             days_out = timedelta(days = vaccineRow['DaysBetweenDoses'])
-            appt_day_2 = (appt_day + days_out) # keep this in datetime
+            appt_day_2 = (datetime.strptime(appt_day, '%Y-%m-%d') + days_out) # keep this in datetime
             cgSqlText = "SELECT * FROM CareGiverSchedule WHERE WorkDay = '" + appt_day_2.strftime('%Y-%m-%d') + "'"
             cursor.execute(cgSqlText)
             cgRows = cursor.fetchall()
@@ -93,6 +97,8 @@ class VaccinePatient:
             
             # Both dates are available
             dates_avail = is_hold * second_avail
+            print('is_hold: ', is_hold)
+            print('dates_avail: ', dates_avail)
 
         
         else:
@@ -120,6 +126,7 @@ class VaccinePatient:
                     cursor.execute("SELECT @@IDENTITY AS 'Identity'; ")
                     _identityRow = cursor.fetchone()
                     self.apptids.append(_identityRow['Identity'])
+                    print(_identityRow['Identity'])
             
             except pymssql.Error as db_err:
                 print("Database Programming Error in SQL Query processing for VaccinePatients! ")
@@ -135,31 +142,33 @@ class VaccinePatient:
         # maintain the Vaccine inventory -> Vaccines (AvailableDoses) -= 1, Vaccines (ReservedDoses) -= 1
         # update the CaregiverSchedule Table -> CaregiverSchedule (SlotStatus) to 2
         # and any additional tasks required to schedule the appointments for the Caregiver  to administer the vaccine doses to the Patient, ensuring that the database properly reflects the Scheduling Actions.
-        apptSqlText = "SELECT * FROM VaccineAppointments WHERE VaccineAppointmentId = %s"
-
-        appt_info = cursor.execute(apptSqlText)
-        patient_id = appt_info['PatientId']
-        vaccine_name = appt_info['VaccineName']
-        caregiver_id = appt_info['CaregiverId']
         
-        vaccineApptSqlText = "UPDATE VaccineAppointments SET SlotStatus = 2 WHERE VaccineAppointmentId = %s"
-        patientSqlText = "UPDATE Patients SET VaccineStatus = 2 WHERE PatientId = %s"
-        vaccineInventorySqlText = "UPDATE Vaccines SET AvailableDoses = AvailableDoses - 1, ReservedDoses = ReservedDoses + 1 WHERE VaccineName = %s"
-        cgSchedSqlText = "UPDATE CaregiverSchedule SET SlotStatus = 2 WHERE CaregiverId = %s"
+        for i, slotid in enumerate(VaccineAppointmentId):
+            
+            slotstatus = str(i*3 + 2) # 2 if 0, 5 if 1
+            apptSqlText = "SELECT * FROM VaccineAppointments WHERE VaccineAppointmentId = %s"
+            appt_info = cursor.execute(apptSqlText, str(slotid))
+            patient_id = appt_info['PatientId']
+            vaccine_name = appt_info['VaccineName']
+            caregiver_id = appt_info['CaregiverId']
+            vaccineApptSqlText = "UPDATE VaccineAppointments SET SlotStatus = " + slotstatus + "WHERE VaccineAppointmentId = %s"
+            patientSqlText = "UPDATE Patients SET VaccineStatus = " + slotstatus + "WHERE PatientId = %s"
+            vaccineInventorySqlText = "UPDATE Vaccines SET AvailableDoses = AvailableDoses - 1, ReservedDoses = ReservedDoses + 1 WHERE VaccineName = %s"
+            cgSchedSqlText = "UPDATE CaregiverSchedule SET SlotStatus = 2 WHERE CaregiverId = %s"
 
-        try: 
-            cursor.execute(vaccineApptSqlText, ((str(self.VaccineAppointmentId))))
-            cursor.execute(patientSqlText, ((str(patient_id))))
-            cursor.execute(vaccineInventorySqlText, ((str(vaccine_name))))
-            cursor.execute(cgSchedSqlText, ((str(caregiver_id))))
-            cursor.connection.commit()
-            print('Query executed successfully. Appointment has been added to the schedule.')
-        except pymssql.Error as db_err:
-            print("Database Programming Error in SQL Query processing for VaccinePatients! ")
-            print("Exception code: " + str(db_err.args[0]))
-            if len(db_err.args) > 1:
-                print("Exception message: " + str(db_err.args[1]))
-            print("SQL text that resulted in an Error: " + self.sqltext)
+            try: 
+                cursor.execute(vaccineApptSqlText, ((str(self.VaccineAppointmentId))))
+                cursor.execute(patientSqlText, ((str(patient_id))))
+                cursor.execute(vaccineInventorySqlText, ((str(vaccine_name))))
+                cursor.execute(cgSchedSqlText, ((str(caregiver_id))))
+                cursor.connection.commit()
+                print('Query executed successfully. Appointment has been added to the schedule.')
+            except pymssql.Error as db_err:
+                print("Database Programming Error in SQL Query processing for VaccinePatients! ")
+                print("Exception code: " + str(db_err.args[0]))
+                if len(db_err.args) > 1:
+                    print("Exception message: " + str(db_err.args[1]))
+                print("SQL text that resulted in an Error: " + self.sqltext)
 
         cursor.connection.commit()
         

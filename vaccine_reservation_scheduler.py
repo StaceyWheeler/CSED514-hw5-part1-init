@@ -15,7 +15,7 @@ from vaccine_patient_wip import VaccinePatient as patient
 class VaccineReservationScheduler:
 
     def __init__(self):
-        return
+        pass
 
     def PutHoldOnAppointmentSlot(self, cursor):
         ''' Method that reserves a CareGiver appointment slot &
@@ -23,10 +23,14 @@ class VaccineReservationScheduler:
         Should return 0 if no slot is available  or -1 if there is a database error'''
         # Note to students: this is a stub that needs to replaced with your code
         self.slotSchedulingId = 0
-        self.getAppointmentSQL = "SELECT TOP 1 CaregiverSlotSchedulingId FROM CaregiverSchedule WHERE SlotStatus = 0"
+        self.getAppointmentSQL = "SELECT TOP (1)* FROM CaregiverSchedule WHERE SlotStatus = 0 ORDER BY WorkDay, SlotHour, SlotMinute"
         try:
             cursor.execute(self.getAppointmentSQL)
-            self.slotSchedulingId = cursor.fetchone()
+            cursor.connection.commit()
+            cursor.execute("SELECT @@IDENTITY AS 'Identity';")
+            _identityRow = cursor.fetchone()
+            self.slotSchedulingId = _identityRow['Identity']
+            #print(self.slotSchedulingId)
             cursor.connection.commit()
             #return self.slotSchedulingId
         
@@ -42,8 +46,9 @@ class VaccineReservationScheduler:
         if self.slotSchedulingId != 0:
             putApptOnHoldSqlText = "UPDATE CaregiverSchedule SET SlotStatus = 1 WHERE CaregiverId = %s"
             try:
-                cursor.execute(putApptOnHoldSqlText, (str(self.slotSchedulingId))
+                cursor.execute(putApptOnHoldSqlText, str(self.slotSchedulingId))
                 cursor.connection.commit()
+                #print(self.slotSchedulingId)
                 print('Query executed successfully. Appointment has been added to the schedule.')
             except pymssql.Error as db_err:
                 print("Database Programming Error in SQL Query processing for VaccinePatients! ")
@@ -88,10 +93,11 @@ if __name__ == '__main__':
                                   UserId=os.getenv("UserID"),
                                   Password=os.getenv("Password")) as sqlClient:
             clear_tables(sqlClient)
-            vrs = VaccineReservationScheduler()
 
             # get a cursor from the SQL connection
             dbcursor = sqlClient.cursor(as_dict=True)
+
+
 
             # Iniialize the caregivers, patients & vaccine supply
             caregiversList = []
@@ -101,6 +107,16 @@ if __name__ == '__main__':
             for cg in caregiversList:
                 cgid = cg.caregiverId
                 caregivers[cgid] = cg
+
+            vrs = VaccineReservationScheduler()
+            cgid = vrs.PutHoldOnAppointmentSlot(dbcursor)
+            print(cgid)
+
+            patient_obj = patient('Snow White', dbcursor)
+            patient_obj.ReserveAppointment(cgid, 'Moderna', dbcursor)
+            appt_ids = patient_obj.apptids
+            print(appt_ids)
+            patient_obj.ScheduleAppointment(appt_ids, dbcursor)
 
             # Testing out adding rows to Vaccines and AddDoses:
             covid_obj_Moderna = covid('Moderna', 2, 28, dbcursor)
