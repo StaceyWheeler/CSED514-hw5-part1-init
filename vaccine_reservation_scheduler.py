@@ -55,10 +55,10 @@ class VaccineReservationScheduler:
             try:
                 cursor.execute(putApptOnHoldSqlText, str(self.slotSchedulingId))
                 cursor.connection.commit()
-                test_sql = "SELECT * FROM CareGiverSchedule WHERE CaregiverSlotSchedulingId = %s"
-                cursor.execute(test_sql, str(self.slotSchedulingId))
-                test_retr = cursor.fetchone()
-                print(test_retr)
+                # test_sql = "SELECT * FROM CareGiverSchedule WHERE CaregiverSlotSchedulingId = %s"
+                # cursor.execute(test_sql, str(self.slotSchedulingId))
+                # test_retr = cursor.fetchone()
+                # print(test_retr)
                 print('Query executed successfully. Appointment has been added to the schedule.')
             except pymssql.Error as db_err:
                 print("Database Programming Error in SQL Query processing for VaccinePatients! ")
@@ -123,10 +123,10 @@ if __name__ == '__main__':
             # print(cgid)
 
             patient_obj = patient('Snow White', dbcursor)
-            print('patient id: ',patient_obj.patientid)
+            # print('patient id: ',patient_obj.patientid)
             patient_obj.ReserveAppointment(cgid, 'Moderna', dbcursor)
             appt_ids = patient_obj.apptids
-            print('now scheduling')
+            # print('now scheduling')
             patient_obj.ScheduleAppointment(appt_ids, dbcursor)
 
             # Testing out adding rows to Vaccines and AddDoses:
@@ -143,4 +143,4 @@ if __name__ == '__main__':
 
             
             # Test cases done!
-            #clear_tables(sqlClient)
+            clear_tables(sqlClient)

@@ -53,7 +53,7 @@ class VaccinePatient:
             Helper to check whether CareGiverSlotID == Hold
             """
             slot_status = get_caregiver_item(SlotId, cursor, col_name='SlotStatus')
-            print('slot_status: ', slot_status)
+            # print('slot_status: ', slot_status)
 
             return slot_status == 1
 
@@ -97,8 +97,8 @@ class VaccinePatient:
             
             # Both dates are available
             dates_avail = is_hold * second_avail
-            print('is_hold: ', is_hold)
-            print('dates_avail: ', dates_avail)
+            # print('is_hold: ', is_hold)
+            # print('dates_avail: ', dates_avail)
 
         
         else:
@@ -115,7 +115,7 @@ class VaccinePatient:
                     VaccineName = vaccine_name
                     PatientId = str(self.patientid)
                     ReservationDate = str(appt_days[i])
-                    print('ReservationDate: ', ReservationDate)
+                    # print('ReservationDate: ', ReservationDate)
                     ReservationStartHour = str(sql_res['SlotHour'])
                     ReservationStartMinute = str(sql_res['SlotMinute'])
                     AppointmentDuration = str(15)
@@ -139,7 +139,7 @@ class VaccinePatient:
                     cursor.execute("SELECT @@IDENTITY AS 'Identity'; ")
                     _identityRow = cursor.fetchone()
                     self.apptids.append(_identityRow['Identity'])
-                    print(_identityRow['Identity'])
+                    # print(_identityRow['Identity'])
             
             except pymssql.Error as db_err:
                 print("Database Programming Error in SQL Query processing for VaccinePatients! ")
