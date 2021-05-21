@@ -167,7 +167,7 @@ class VaccinePatient:
             patient_id = str(appt_info['PatientId'])
             vaccine_name = appt_info['VaccineName']
             caregiver_id = str(appt_info['CaregiverId'])
-            vaccineApptSqlText = "UPDATE VaccineAppointments SET SlotStatus = " + slotstatus + " WHERE VaccineAppointmentId = " + appt_id
+            vaccineApptSqlText = "UPDATE VaccineAppointments SET SlotStatus = 2 WHERE VaccineAppointmentId = " + appt_id
             patientSqlText = "UPDATE Patients SET VaccineStatus = " + slotstatus + "WHERE PatientId = " + patient_id
             vaccineInventorySqlText = "UPDATE Vaccines SET AvailableDoses = AvailableDoses - 1, ReservedDoses = ReservedDoses + 1 WHERE VaccineName = " + "'" + vaccine_name + "'"
             cgSchedSqlText = "UPDATE CaregiverSchedule SET SlotStatus = 2 WHERE CaregiverId = " + caregiver_id
