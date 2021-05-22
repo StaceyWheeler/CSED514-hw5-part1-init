@@ -94,6 +94,7 @@ class VaccinePatient:
                 # Need to verify second appointment
 
                 days_out = timedelta(days = vaccineRow['DaysBetweenDoses'])
+                print('type(appt_day) ', type(appt_day))
                 appt_day_2 = appt_day + days_out
                 #appt_day_2 = (datetime.strptime(appt_day, '%Y-%m-%d') + days_out) # keep this in datetime
                 cgSqlText = "SELECT * FROM CareGiverSchedule WHERE WorkDay = '" + appt_day_2.strftime('%Y-%m-%d') + "'"
