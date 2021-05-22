@@ -32,6 +32,7 @@ class VaccineReservationScheduler:
                 cursor.connection.commit()
             else:
                 print('Appointment slot unavailable. Please try again later.')
+                cursor.connection.rollback()
 
         
         except pymssql.Error as db_err:
@@ -59,6 +60,7 @@ class VaccineReservationScheduler:
                 if len(db_err.args) > 1:
                     print("Exception message: " + str(db_err.args[1]))
                 print("SQL text that resulted in an Error: " + self.sqltext)
+                cursor.connection.rollback()
 
         cursor.connection.commit()
         return self.slotSchedulingId

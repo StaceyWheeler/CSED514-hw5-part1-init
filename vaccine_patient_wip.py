@@ -161,9 +161,11 @@ class VaccinePatient:
             
             else:
                 print("Unable to reserve appointment for Patient ", self.name, ". Caregiver unavailable.")
+                cursor.connection.rollback()
         
         else:
             print("Unable to reserve appointment for Patient ", self.name, ". Unable to reserve sufficient doses.")
+            cursor.connection.rollback()
 
     def ScheduleAppointment(self, VaccineAppointmentId, cursor):
         # ScheduleAppointment() marks the appointments as “Scheduled” -> VaccineAppointments (SlotStatus) to 2 
@@ -199,6 +201,7 @@ class VaccinePatient:
                     if len(db_err.args) > 1:
                         print("Exception message: " + str(db_err.args[1]))
                     print("SQL text that resulted in an Error: " + sqltext)
+                    cursor.connection.rollback()
 
 
         cursor.connection.commit()
