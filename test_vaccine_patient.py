@@ -4,7 +4,7 @@ import pymssql
 from sql_connection_manager import SqlConnectionManager
 from enums import *
 from utils import *
-from vaccine_patient_wip import VaccinePatient as patient
+from vaccine_patient import VaccinePatient as patient
 from COVID19_vaccine import COVID19Vaccine as covid
 from vaccine_caregiver import VaccineCaregiver as caregiver
 from vaccine_reservation_scheduler import VaccineReservationScheduler as vrs
@@ -26,8 +26,7 @@ class TestVaccinePatient(unittest.TestCase):
                     self.caregiver1 = caregiver('Annie Wilkes', cursor)
                     vrs_obj = vrs()
                     self.schedid = vrs_obj.PutHoldOnAppointmentSlot(cursor)
-                    # clear the tables before testing
-                    # clear_tables(self.sqlClient)
+                    
                     # create a new Patient object
                     self.patient1 = patient('Hercule Poirot', cursor)
                     # check if the patient is correctly inserted into the database
@@ -66,17 +65,14 @@ class TestVaccinePatient(unittest.TestCase):
                     self.caregiver1 = caregiver('Annie Wilkes', cursor)
                     vrs_obj = vrs()
                     self.schedid = vrs_obj.PutHoldOnAppointmentSlot(cursor)
-                    # clear the tables before testing
-                    # clear_tables(self.sqlClient)
+                    
                     # create a new Patient object
                     self.patient1 = patient('Hercule Poirot', cursor)
-                    #pid = self.patient1.patientid
 
                     # reserve appointment for Patient 1
                     self.patient1.ReserveAppointment(self.schedid, 'Moderna', cursor)
 
                     sqlQuery = "SELECT v.* FROM VaccineAppointments v, Patients p WHERE v.PatientId = p.PatientId"
-                    #cursor.execute(sqlQuery, (str(pid)))
                     cursor.execute(sqlQuery)
                     rows = cursor.fetchall()
                     if len(rows) < 1:
@@ -112,11 +108,9 @@ class TestVaccinePatient(unittest.TestCase):
                     self.caregiver1 = caregiver('Annie Wilkes', cursor)
                     vrs_obj = vrs()
                     self.schedid = vrs_obj.PutHoldOnAppointmentSlot(cursor)
-                    # clear the tables before testing
-                    # clear_tables(self.sqlClient)
+                    
                     # create a new Patient object
                     self.patient1 = patient('Hercule Poirot', cursor)
-                    #pid = self.patient1.patientid
 
                     # reserve and schedule appointment for Patient 1
                     self.patient1.ReserveAppointment(self.schedid, 'Moderna', cursor)
@@ -124,7 +118,6 @@ class TestVaccinePatient(unittest.TestCase):
                     self.patient1.ScheduleAppointment(appt_ids, cursor)
 
                     sqlQuery = "SELECT v.* FROM VaccineAppointments v, Patients p WHERE v.PatientId = p.PatientId"
-                    #cursor.execute(sqlQuery, (str(pid)))
                     cursor.execute(sqlQuery)
                     rows = cursor.fetchall()
                     if len(rows) < 1:
@@ -160,14 +153,12 @@ class TestVaccinePatient(unittest.TestCase):
                     self.caregiver1 = caregiver('Annie Wilkes', cursor)
                     vrs_obj = vrs()
                     self.schedid = vrs_obj.PutHoldOnAppointmentSlot(cursor)
-                    # clear the tables before testing
-                    # clear_tables(self.sqlClient)
-                    # create a new Patient object
+                    # create 3 new Patient objects
                     self.patient_1 = patient('Snow White', cursor)
                     self.patient_2 = patient('Robin Hood', cursor)
                     self.patient_3 = patient('Peter Rabbit', cursor)
-                    #pid = self.patient1.patientid
 
+                    # reserve and schedule appointments for all 3 patients. There are insufficient doses for patient3
                     for pat in [self.patient_1, self.patient_2, self.patient_3]:
                         schedid = vrs_obj.PutHoldOnAppointmentSlot(cursor)
                         if schedid != -2:
@@ -176,7 +167,6 @@ class TestVaccinePatient(unittest.TestCase):
                             pat.ScheduleAppointment(appt_ids, cursor)
 
                     sqlQuery = "SELECT * FROM VaccineAppointments"
-                    #cursor.execute(sqlQuery, (str(pid)))
                     cursor.execute(sqlQuery)
                     rows = cursor.fetchall()
                     if len(rows) < 1:
