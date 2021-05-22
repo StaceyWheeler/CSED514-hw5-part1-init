@@ -1,4 +1,3 @@
-import datetime
 from enum import IntEnum
 import os
 import pymssql
@@ -21,7 +20,6 @@ class VaccineReservationScheduler:
         ''' Method that reserves a CareGiver appointment slot &
         returns the unique scheduling slotid
         Should return -2 if no slot is available  or -1 if there is a database error'''
-        # Note to students: this is a stub that needs to replaced with your code
         self.slotSchedulingId = -2
         self.getAppointmentSQL = "SELECT TOP (1)* FROM CaregiverSchedule WHERE SlotStatus = 0 ORDER BY WorkDay, SlotHour, SlotMinute ASC"
         try:
@@ -49,10 +47,6 @@ class VaccineReservationScheduler:
             try:
                 cursor.execute(putApptOnHoldSqlText, str(self.slotSchedulingId))
                 cursor.connection.commit()
-                # test_sql = "SELECT * FROM CareGiverSchedule WHERE CaregiverSlotSchedulingId = %s"
-                # cursor.execute(test_sql, str(self.slotSchedulingId))
-                # test_retr = cursor.fetchone()
-                # print(test_retr)
                 print('Query executed successfully. Appointment has been added to the schedule.')
             except pymssql.Error as db_err:
                 print("Database Programming Error in SQL Query processing for VaccinePatients! ")
@@ -72,12 +66,11 @@ class VaccineReservationScheduler:
         returns 0 is there if the database update dails 
         returns -1 the same slotid when the database command fails
         returns -2 if the slotid parm is invalid '''
-        # Note to students: this is a stub that needs to replaced with your code
+
         if slotid < 1:
             return -2
         self.slotSchedulingId = slotid
-        #getAppointmnetSQL should grab the first available appointment from the CaregiverSchedule.
-        #Do we need to do a join on CaregiverSchedule and AppointmentStatusCode? 
+
         self.getAppointmentSQL = "SELECT TOP 1 * FROM CaregiverSchedule WHERE SlotStatus = "
         try:
             cursor.execute(self.getAppointmentSQL)
@@ -90,7 +83,6 @@ class VaccineReservationScheduler:
             print("SQL text that resulted in an Error: " + self.getAppointmentSQL)
             return -1
 
-        #We still need to mark the appointment OnHold... where to do that? In the select statement?
 
 if __name__ == '__main__':
         with SqlConnectionManager(Server=os.getenv("Server"),
@@ -102,8 +94,6 @@ if __name__ == '__main__':
             # get a cursor from the SQL connection
             dbcursor = sqlClient.cursor(as_dict=True)
 
-
-
             # Iniialize the caregivers, patients & vaccine supply
             caregiversList = []
             caregiversList.append(VaccineCaregiver('Carrie Nation', dbcursor))
@@ -112,6 +102,8 @@ if __name__ == '__main__':
             for cg in caregiversList:
                 cgid = cg.caregiverId
                 caregivers[cgid] = cg
+
+            # Add 5 doses of Moderna
             
             covid_obj_Moderna = covid('Moderna', 2, 28, dbcursor)
             covid_obj_Moderna.AddDoses('Moderna', 5, dbcursor)
@@ -119,9 +111,13 @@ if __name__ == '__main__':
             vrs = VaccineReservationScheduler()
             cgid = vrs.PutHoldOnAppointmentSlot(dbcursor)
 
+            # Add 3 patients
+
             patient_1 = patient('Snow White', dbcursor)
             patient_2 = patient('Robin Hood', dbcursor)
             patient_3 = patient('Peter Rabbit', dbcursor)
+
+            # Patient3 Will fail- insufficient doses
 
             for pat in [patient_1, patient_2, patient_3]:
                 schedid = vrs.PutHoldOnAppointmentSlot(dbcursor)
@@ -130,18 +126,6 @@ if __name__ == '__main__':
                     appt_ids = pat.apptids
                     pat.ScheduleAppointment(appt_ids, dbcursor)
 
-
-            # Testing out adding rows to Vaccines and AddDoses:
-
-            
-            # Testing out ReserveDoses:
-            # covid_obj_Moderna = covid('Moderna', 2, 28, dbcursor)
-            # covid_obj_Moderna.ReserveDoses('Moderna', dbcursor)
-
-            # Vaccines table is populated with Moderna vaccines. Let's reserve one
-            #new_patient=patient('John Doe', dbcursor) # Adds John Doe to the Patients table with VaccineStatus=0
-            #new_patient.ReserveAppointment(1, 'Moderna', dbcursor)
-
             
             # Test cases done!
-            # clear_tables(sqlClient)
+            clear_tables(sqlClient)
