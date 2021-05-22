@@ -27,19 +27,12 @@ class VaccineReservationScheduler:
         try:
             cursor.execute(self.getAppointmentSQL)
             row = cursor.fetchone()
-            self.slotSchedulingId = row['CaregiverSlotSchedulingId']
-            print("slotID: ", self.slotSchedulingId)
-            cursor.connection.commit()
-            #cursor.execute("SELECT @@IDENTITY AS 'Identity';")
-            #rows = cursor.fetchall()
-            #for row in rows:
-            #    _identityRow = row['Identity']
-            #    print("identityrow: ",_identityRow)
-            #    break
-            #self.slotSchedulingId = _identityRow
-            #print(self.slotSchedulingId)
-            #cursor.connection.commit()
-            #return self.slotSchedulingId
+            if row != None:
+                self.slotSchedulingId = row['CaregiverSlotSchedulingId']
+                cursor.connection.commit()
+            else:
+                print('Appointment slot unavailable. Please try again later.')
+
         
         except pymssql.Error as db_err:
             print("Database Programming Error in SQL Query processing! ")
@@ -117,21 +110,27 @@ if __name__ == '__main__':
             for cg in caregiversList:
                 cgid = cg.caregiverId
                 caregivers[cgid] = cg
+            
+            covid_obj_Moderna = covid('Moderna', 2, 28, dbcursor)
+            covid_obj_Moderna.AddDoses('Moderna', 5, dbcursor)
 
             vrs = VaccineReservationScheduler()
             cgid = vrs.PutHoldOnAppointmentSlot(dbcursor)
-            # print(cgid)
 
-            patient_obj = patient('Snow White', dbcursor)
-            # print('patient id: ',patient_obj.patientid)
-            patient_obj.ReserveAppointment(cgid, 'Moderna', dbcursor)
-            appt_ids = patient_obj.apptids
-            # print('now scheduling')
-            patient_obj.ScheduleAppointment(appt_ids, dbcursor)
+            patient_1 = patient('Snow White', dbcursor)
+            patient_2 = patient('Robin Hood', dbcursor)
+            patient_3 = patient('Peter Rabbit', dbcursor)
+
+            for pat in [patient_1, patient_2, patient_3]:
+                schedid = vrs.PutHoldOnAppointmentSlot(dbcursor)
+                if schedid != -2:
+                    pat.ReserveAppointment(schedid, 'Moderna', dbcursor)
+                    appt_ids = pat.apptids
+                    pat.ScheduleAppointment(appt_ids, dbcursor)
+
 
             # Testing out adding rows to Vaccines and AddDoses:
-            covid_obj_Moderna = covid('Moderna', 2, 28, dbcursor)
-            covid_obj_Moderna.AddDoses('Moderna', 20, dbcursor)
+
             
             # Testing out ReserveDoses:
             # covid_obj_Moderna = covid('Moderna', 2, 28, dbcursor)
@@ -143,4 +142,4 @@ if __name__ == '__main__':
 
             
             # Test cases done!
-            clear_tables(sqlClient)
+            # clear_tables(sqlClient)

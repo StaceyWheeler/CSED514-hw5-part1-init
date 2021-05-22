@@ -10,6 +10,7 @@ class VaccinePatient:
         """
         Adds new Patient to Patients table
         """
+        self.name = name
         self.sqltext = "INSERT INTO Patients (PatientName, VaccineStatus) VALUES ('" + name + "', 0)"
         self.patientid = 0
         self.apptids = []
@@ -53,9 +54,19 @@ class VaccinePatient:
             Helper to check whether CareGiverSlotID == Hold
             """
             slot_status = get_caregiver_item(SlotId, cursor, col_name='SlotStatus')
-            # print('slot_status: ', slot_status)
 
             return slot_status == 1
+        
+        def check_dose_avail(vaccine, n, cursor):
+            """
+            Helper to check whether vaccine inventory is available
+            """
+
+            sqltext = "SELECT * FROM Vaccines WHERE VaccineName = " + "'" + vaccine + "'"
+            cursor.execute(sqltext)
+            row = cursor.fetchone()
+
+            return row['AvailableDoses'] >= n
 
         # First check that SlotID == Hold
         slotids = []
@@ -64,8 +75,6 @@ class VaccinePatient:
         if is_hold:
             slotids.append(CaregiverScheduleID)
         appt_day = get_caregiver_item(CaregiverScheduleID, cursor, col_name='WorkDay')
-        #print(appt_day)
-        #print(type(appt_day))
         appt_days.append(appt_day)
 
         # Check the dosage needed for this vaccine
@@ -75,79 +84,86 @@ class VaccinePatient:
         vaccineRow = cursor.fetchone()
         dosage = vaccineRow['DosesPerPatient']
         dates_avail = False
-        # print(dosage)
 
-        if dosage > 1:
+        # Check whether dosage inventory is sufficient
 
-            # Need to verify second appointment
+        if check_dose_avail(vaccine_name, dosage, cursor):
 
-            days_out = timedelta(days = vaccineRow['DaysBetweenDoses'])
-            appt_day_2 = (datetime.strptime(appt_day, '%Y-%m-%d') + days_out) # keep this in datetime
-            cgSqlText = "SELECT * FROM CareGiverSchedule WHERE WorkDay = '" + appt_day_2.strftime('%Y-%m-%d') + "'"
-            cursor.execute(cgSqlText)
-            cgRows = cursor.fetchall()
-            second_avail = False
-            for cgRow in cgRows:
-                if cgRow['SlotStatus'] == 0:
-                    cg_slot_2 = cgRow['CaregiverSlotSchedulingId']
-                    second_avail = True
-                    slotids.append(cg_slot_2)
-                    appt_days.append(appt_day_2)
-                    break
+            if dosage > 1:
+
+                # Need to verify second appointment
+
+                days_out = timedelta(days = vaccineRow['DaysBetweenDoses'])
+                appt_day_2 = (datetime.strptime(appt_day, '%Y-%m-%d') + days_out) # keep this in datetime
+                cgSqlText = "SELECT * FROM CareGiverSchedule WHERE WorkDay = '" + appt_day_2.strftime('%Y-%m-%d') + "'"
+                cursor.execute(cgSqlText)
+                cgRows = cursor.fetchall()
+                second_avail = False
+                for cgRow in cgRows:
+                    if cgRow['SlotStatus'] == 0:
+                        cg_slot_2 = cgRow['CaregiverSlotSchedulingId']
+                        second_avail = True
+                        slotids.append(cg_slot_2)
+                        appt_days.append(appt_day_2)
+                        break
+                
+                # Both dates are available
+                dates_avail = is_hold * second_avail
+                # print('is_hold: ', is_hold)
+                # print('dates_avail: ', dates_avail)
+
             
-            # Both dates are available
-            dates_avail = is_hold * second_avail
-            # print('is_hold: ', is_hold)
-            # print('dates_avail: ', dates_avail)
+            else:
+                # Just first date is available
+                dates_avail = is_hold
+        
+            if dates_avail:
 
+                try:
+
+                    for i, slotid in enumerate(slotids):
+                        sql_res = get_caregiver_item(slotid, cursor)
+                        careGiverID = str(sql_res['CaregiverId'])
+                        VaccineName = vaccine_name
+                        PatientId = str(self.patientid)
+                        ReservationDate = str(appt_days[i])
+                        # print('ReservationDate: ', ReservationDate)
+                        ReservationStartHour = str(sql_res['SlotHour'])
+                        ReservationStartMinute = str(sql_res['SlotMinute'])
+                        AppointmentDuration = str(15)
+                        SlotStatus = str(i*3 + 1)# 0 if i = 0; 4 if i = 1
+                        self.sqltext_reserve = """
+                        INSERT INTO VaccineAppointments(
+                            VaccineName, 
+                            PatientId, 
+                            CaregiverId, 
+                            ReservationDate, 
+                            ReservationStartHour, 
+                            ReservationStartMinute, 
+                            AppointmentDuration, 
+                            SlotStatus) VALUES(
+                            """
+                        self.sqltext_reserve += "'" + VaccineName + "'" + "," + PatientId + "," + careGiverID + ","
+                        self.sqltext_reserve += "'" + ReservationDate + "'" + "," + ReservationStartHour + "," + ReservationStartMinute + ","
+                        self.sqltext_reserve +=  AppointmentDuration + "," + SlotStatus + ")"
+                        cursor.execute(self.sqltext_reserve)
+                        cursor.connection.commit()
+                        cursor.execute("SELECT @@IDENTITY AS 'Identity'; ")
+                        _identityRow = cursor.fetchone()
+                        self.apptids.append(_identityRow['Identity'])
+                
+                except pymssql.Error as db_err:
+                    print("Database Programming Error in SQL Query processing for VaccinePatients! ")
+                    print("Exception code: " + str(db_err.args[0]))
+                    if len(db_err.args) > 1:
+                        print("Exception message: " + str(db_err.args[1]))
+                    print("SQL text that resulted in an Error: " + self.sqltext_reserve)
+            
+            else:
+                print("Unable to reserve appointment for Patient ", self.name, ". Caregiver unavailable.")
         
         else:
-            # Just first date is available
-            dates_avail = is_hold
-        
-        if dates_avail:
-
-            try:
-
-                for i, slotid in enumerate(slotids):
-                    sql_res = get_caregiver_item(slotid, cursor)
-                    careGiverID = str(sql_res['CaregiverId'])
-                    VaccineName = vaccine_name
-                    PatientId = str(self.patientid)
-                    ReservationDate = str(appt_days[i])
-                    # print('ReservationDate: ', ReservationDate)
-                    ReservationStartHour = str(sql_res['SlotHour'])
-                    ReservationStartMinute = str(sql_res['SlotMinute'])
-                    AppointmentDuration = str(15)
-                    SlotStatus = str(i*3 + 1 )# 0 if i = 0; 4 if i = 1
-                    self.sqltext_reserve = """
-                    INSERT INTO VaccineAppointments(
-                        VaccineName, 
-                        PatientId, 
-                        CaregiverId, 
-                        ReservationDate, 
-                        ReservationStartHour, 
-                        ReservationStartMinute, 
-                        AppointmentDuration, 
-                        SlotStatus) VALUES(
-                        """
-                    self.sqltext_reserve += "'" + VaccineName + "'" + "," + PatientId + "," + careGiverID + ","
-                    self.sqltext_reserve += "'" + ReservationDate + "'" + "," + ReservationStartHour + "," + ReservationStartMinute + ","
-                    self.sqltext_reserve +=  AppointmentDuration + "," + SlotStatus + ")"
-                    cursor.execute(self.sqltext_reserve)
-                    cursor.connection.commit()
-                    cursor.execute("SELECT @@IDENTITY AS 'Identity'; ")
-                    _identityRow = cursor.fetchone()
-                    self.apptids.append(_identityRow['Identity'])
-                    # print(_identityRow['Identity'])
-            
-            except pymssql.Error as db_err:
-                print("Database Programming Error in SQL Query processing for VaccinePatients! ")
-                print("Exception code: " + str(db_err.args[0]))
-                if len(db_err.args) > 1:
-                    print("Exception message: " + str(db_err.args[1]))
-                print("SQL text that resulted in an Error: " + self.sqltext_reserve)
-
+            print("Unable to reserve appointment for Patient ", self.name, ". Unable to reserve sufficient doses.")
 
     def ScheduleAppointment(self, VaccineAppointmentId, cursor):
         # ScheduleAppointment() marks the appointments as “Scheduled” -> VaccineAppointments (SlotStatus) to 2 
@@ -170,13 +186,13 @@ class VaccinePatient:
             vaccineApptSqlText = "UPDATE VaccineAppointments SET SlotStatus = 2 WHERE VaccineAppointmentId = " + appt_id
             patientSqlText = "UPDATE Patients SET VaccineStatus = " + slotstatus + "WHERE PatientId = " + patient_id
             vaccineInventorySqlText = "UPDATE Vaccines SET AvailableDoses = AvailableDoses - 1, ReservedDoses = ReservedDoses + 1 WHERE VaccineName = " + "'" + vaccine_name + "'"
-            cgSchedSqlText = "UPDATE CaregiverSchedule SET SlotStatus = 2 WHERE CaregiverId = " + caregiver_id
+            cgSchedSqlText = "UPDATE CaregiverSchedule SET SlotStatus = 2 WHERE VaccineAppointmentId = " + appt_id
 
             for sqltext in [vaccineApptSqlText, patientSqlText, vaccineInventorySqlText, cgSchedSqlText]:
                 try:
                     cursor.execute(sqltext)
                     cursor.connection.commit()
-                    print('Query executed successfully.')
+                    print('Updated ', sqltext.split(" ")[1], "table for Appointment ", i+1, "for Patient ", self.name)
                 except pymssql.Error as db_err:
                     print("Database Programming Error in SQL Query processing!")
                     print("Exception code: " + str(db_err.args[0]))
@@ -186,5 +202,3 @@ class VaccinePatient:
 
 
         cursor.connection.commit()
-        
-        return None
