@@ -34,12 +34,7 @@ class VaccineReservationScheduler:
 
         
         except pymssql.Error as db_err:
-            print("Database Programming Error in SQL Query processing! ")
-            print("Exception code: " + str(db_err.args[0]))
-            if len(db_err.args) > 1:
-                print("Exception message: " + db_err.args[1])           
-            print("SQL text that resulted in an Error: " + self.getAppointmentSQL)
-            cursor.connection.rollback()
+            db_err_handler('CareGiverSchedule', self.getAppointmentSQL, db_err, cursor)
             return -1
 
         if self.slotSchedulingId != -2:
@@ -49,12 +44,8 @@ class VaccineReservationScheduler:
                 cursor.connection.commit()
                 print('Query executed successfully. Appointment has been added to the schedule.')
             except pymssql.Error as db_err:
-                print("Database Programming Error in SQL Query processing for VaccinePatients! ")
-                print("Exception code: " + str(db_err.args[0]))
-                if len(db_err.args) > 1:
-                    print("Exception message: " + str(db_err.args[1]))
-                print("SQL text that resulted in an Error: " + self.sqltext)
-                cursor.connection.rollback()
+                db_err_handler('CareGiverSchedule', putApptOnHoldSqlText, db_err, cursor)
+
 
         cursor.connection.commit()
         return self.slotSchedulingId
@@ -128,4 +119,4 @@ if __name__ == '__main__':
 
             
             # Test cases done!
-            clear_tables(sqlClient)
+            # clear_tables(sqlClient)
